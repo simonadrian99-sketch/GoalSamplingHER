@@ -1,0 +1,15 @@
+# Virtuelle Umgebung
+venv/
+.env
+__pycache__/
+*.pyc
+
+# Stable Baselines3 / Training Output
+logs/
+models/
+
+# VS Code Einstellungen
+.vscode/
+
+# Systemdateien
+.DS_Store

@@ -1,0 +1,19 @@
+04.03.:
+
+- adjusted observation in SimpleEnv to intake not only the image, but also the direction
+- updated MinigridFeatureExtractor to correctly calculate the new total_concat_size
+- fixed the enviroment so that the agent correctly only uses action 0,1,2 (turn left, turn right, move forward) in the Empty Enviroment (self.action_space = gym.spaces.Discrete(3))
+- changed featureDimension from 128 to 512
+- added some debug messages
+- added Callback classes to log selected actions and collision in tensorboard
+- added collision punishment so that the agent wont get stuck walking into a wall (trying to move forward but nothing happens)
+
+
+TODO: 
+- Test A2C + HER
+- Test harder Enviroments
+- implement different goal selection strategies (random, "fixed future")
+- Find better way to label models
+-add comments
+-figure out version control (github)
+- normalise achieved and desired goal in featuresextractor (divide by grid size)

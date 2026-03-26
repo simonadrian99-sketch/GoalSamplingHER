@@ -7,7 +7,7 @@ from SimpleEnv import SimpleEnv
 from MinigridFeaturesExtractor import MinigridFeaturesExtractor
 import gymnasium as gym
 from minigrid.wrappers import ImgObsWrapper, DictObservationSpaceWrapper
-from stable_baselines3 import DQN, HerReplayBuffer
+from stable_baselines3 import A2C, DQN, HerReplayBuffer
 from stable_baselines3.her.goal_selection_strategy import GoalSelectionStrategy
 import os
 import time
@@ -72,9 +72,9 @@ action_cb = ActionLoggerCallback()
 collision_cb = CollisionLoggerCallback()
 
 # training loop
-for i in itertools.count(1):
+for i in range(1, 11):  # 10 Meilensteine à 30k Schritte
     try:
-        # train model 10k steps and log to tensorboard
+        # train model 30k steps and log to tensorboard
         model.learn(
             total_timesteps=TIMESTEPS,
             reset_num_timesteps=False,

@@ -20,16 +20,15 @@ class SimpleEnv(MiniGridEnv):
         agent_start_pos=(1, 1),
         agent_start_dir=0,
         max_steps: int | None = None,
-        GOAL_TYPE = "randLast", # "randLast" or "fixed"
-        START_POS_TYPE = "randFirst", # "fixed" or "randFirst"
+        GOAL_TYPE="randLast",  # "randLast" or "fixed"
+        START_POS_TYPE="randFirst",  # "fixed" or "randFirst"
         **kwargs,
     ):
-       
+
         self.agent_start_pos = agent_start_pos
         self.agent_start_dir = agent_start_dir
         self.GOAL_TYPE = GOAL_TYPE
         self.START_POS_TYPE = START_POS_TYPE
-       
 
         mission_space = MissionSpace(mission_func=self._gen_mission)
 
@@ -59,13 +58,13 @@ class SimpleEnv(MiniGridEnv):
     def _gen_mission():
         return "grand mission"
 
-        
-
     # generate the custom grid for the environment
+
     def _gen_grid(self, width, height):
-              
+
         self.grid = Grid(width, height)  # Create an empty grid
-        self.grid.wall_rect(0, 0, width, height)  # Generate the surrounding walls
+        # Generate the surrounding walls
+        self.grid.wall_rect(0, 0, width, height)
 
         # Generate vertical separation wall
         """
@@ -76,14 +75,15 @@ class SimpleEnv(MiniGridEnv):
         # Place the door and key
       #  self.grid.set(5, 6, Door(COLOR_NAMES[0], is_locked=True))
       #  self.grid.set(3, 6, Key(COLOR_NAMES[0]))
-     
-        # Place the agent 
+
+        # Place the agent
         if self.START_POS_TYPE == "randFirst":
-            self.agent_pos= (1, self.np_random.integers(1, self.height - 2)) # random start position in the first column
+            # random start position in the first column
+            self.agent_pos = (1, self.np_random.integers(1, self.height - 2))
         elif self.START_POS_TYPE == "fixed":
-            self.agent_pos = (1, 1) # fixed start position
+            self.agent_pos = (1, 1)  # fixed start position
         self.agent_dir = self.agent_start_dir
-    
+
         """ old code for placing the agent at a fixed position
         if self.agent_start_pos is not None:
             self.agent_pos = self.agent_start_pos
@@ -94,32 +94,28 @@ class SimpleEnv(MiniGridEnv):
 
         # Place the goal
         if self.GOAL_TYPE == "randLast":
-            self.goal_pos = (width - 2, self.np_random.integers(1, height - 2)) # random goal position in the last column
+            # random goal position in the last column
+            self.goal_pos = (width - 2, self.np_random.integers(1, height - 2))
         else:
-            self.goal_pos = (width - 2, height - 2) # fixed goal position
-                
-        self.put_obj(Goal(), self.goal_pos[0], self.goal_pos[1]) # place the goal object in the grid
+            self.goal_pos = (width - 2, height - 2)  # fixed goal position
 
-        self.mission = "grand mission" #name of the mission
+        # place the goal object in the grid
+        self.put_obj(Goal(), self.goal_pos[0], self.goal_pos[1])
 
-
-    
-        
-        
+        self.mission = "grand mission"  # name of the mission
 
     def reset(self, **kwargs):
 
         # reset the environment
-        obs, info = super().reset(**kwargs)      
-   
-        # find the goal position and place the goal object there
-        #self.goal_pos = self._find_goal_pos()
-        #self.put_obj(Goal(), self.goal_pos[0], self.goal_pos[1])
+        obs, info = super().reset(**kwargs)
 
-    
+        # find the goal position and place the goal object there
+        # self.goal_pos = self._find_goal_pos()
+        # self.put_obj(Goal(), self.goal_pos[0], self.goal_pos[1])
+
         # get current agent position (achieved_goal)
         current_pos = self.unwrapped.agent_pos
-    
+
         # construct the goal-conditioned dict (image, array, array)
         goal_obs = {
             "observation": obs["image"],
@@ -135,25 +131,23 @@ class SimpleEnv(MiniGridEnv):
         old_pos = self.unwrapped.agent_pos
         # step the environment
         obs, _, terminated, truncated, info = super().step(action)
-    
+
         # get positions
         current_pos = self.unwrapped.agent_pos
         achieved_goal = np.array(current_pos, dtype=np.int64)
         desired_goal = np.array(self.goal_pos, dtype=np.int64)
-    
-        is_collision = (action == 2 and np.array_equal(old_pos, current_pos)) # check if the agent tried to move forward but stayed in the same position (indicating a collision with a wall)
-        info['is_collision'] = is_collision # add collision info to the info dict for logging in the callback
 
-
+        # check if the agent tried to move forward but stayed in the same position (indicating a collision with a wall)
+        is_collision = (action == 2 and np.array_equal(old_pos, current_pos))
+        # add collision info to the info dict for logging in the callback
+        info['is_collision'] = is_collision
 
         # compute reward based on goal achievement
         reward = self.compute_reward(achieved_goal, desired_goal, info)
-    
+
         # add success info for HER
         is_success = np.array_equal(achieved_goal, desired_goal)
-        info['is_success'] = is_success 
-
-      
+        info['is_success'] = is_success
 
         # construct the goal-conditioned dict (image, array, array)
         goal_obs = {
@@ -168,42 +162,43 @@ class SimpleEnv(MiniGridEnv):
         return goal_obs, reward, terminated, truncated, info
 
     def compute_reward(self, achieved_goal, desired_goal, info):
-    
-    # If inputs are batched, compare each pair of achieved and desired goals
+
+        # If inputs are batched, compare each pair of achieved and desired goals
         if len(achieved_goal.shape) > 1:
-        # Vectorized comparison
+            # Vectorized comparison
             is_success = np.all(achieved_goal == desired_goal, axis=1)
             reward = is_success.astype(np.float32) - 1.0
         else:
-        # Single item comparison
+            # Single item comparison
             is_success = np.array_equal(achieved_goal, desired_goal)
             reward = 0.0 if is_success else -1.0
-        
+
         if info is not None:
             if isinstance(info, dict) and info.get("is_collision", False):
-                reward -=  0.2  # Penalty for collision    
+                reward -= 0.2  # Penalty for collision
             elif isinstance(info, (list, np.ndarray)):
-                collision_mask = np.array([i.get("is_collision", False) for i in info])
-                reward -= (collision_mask.astype(np.float32) * 0.2)   
+                collision_mask = np.array(
+                    [i.get("is_collision", False) for i in info])
+                reward -= (collision_mask.astype(np.float32) * 0.2)
 
         return reward
 
     def _find_goal_pos(self):
-    # Iterate over the grid to find the object of type 'Goal'
+        # Iterate over the grid to find the object of type 'Goal'
         for i in range(self.unwrapped.grid.width):
             for j in range(self.unwrapped.grid.height):
                 obj = self.unwrapped.grid.get(i, j)
                 if obj is not None and isinstance(obj, Goal):
                     return (i, j)
-        return (self.unwrapped.grid.width - 2, self.unwrapped.grid.height - 2) # Fallback if no goal found 
-
+        # Fallback if no goal found
+        return (self.unwrapped.grid.width - 2, self.unwrapped.grid.height - 2)
 
 
 def main():
     env = SimpleEnv(render_mode="human")
-    manual_control = ManualControl(env) # enable manual control for testing
+    manual_control = ManualControl(env)  # enable manual control for testing
     manual_control.start()
 
-    
+
 if __name__ == "__main__":
     main()

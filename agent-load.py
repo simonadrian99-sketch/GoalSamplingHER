@@ -9,11 +9,11 @@ import os
 import numpy as np
 
 
-#create environment
+# create environment
 env = SimpleEnv(render_mode="human")
 
-models_dir="models/DQN+HER_10x10_future_randLast_1772658498"
-model_path=f"{models_dir}/120000.zip"
+models_dir = "models/DQN+HER_10x10_future_randLast_20260305-122751"
+model_path = f"{models_dir}/420000.zip"
 
 policy_kwargs = dict(
     features_extractor_class=MinigridFeaturesExtractor,
@@ -22,11 +22,12 @@ policy_kwargs = dict(
 
 
 # load model from saved checkpoint
-model = DQN.load(model_path, env=env, custom_objects={"policy_kwargs": policy_kwargs}, device="cuda")
+model = DQN.load(model_path, env=env, custom_objects={
+                 "policy_kwargs": policy_kwargs}, device="cuda")
 print(f"Model loaded from {model_path}")
 episodes = 10
 
-#visualize the agent's behavior for a few episodes
+# visualize the agent's behavior for a few episodes
 for ep in range(episodes):
     print(f"Episode: {ep+1}")
     obs, info = env.reset()
@@ -48,7 +49,8 @@ for ep in range(episodes):
             if event.type == pygame.QUIT:
                 env.close()
                 exit()
-        if done: break
+        if done:
+            break
       #  print(obs["direction"], obs["direction"].dtype)
         obs['direction'] = np.array(obs['direction'], dtype=np.int64)
         obs['achieved_goal'] = np.array(obs['achieved_goal'], dtype=np.float32)

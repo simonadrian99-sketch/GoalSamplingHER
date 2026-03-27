@@ -2,12 +2,15 @@ import itertools
 
 from ActionLoggerCallback import ActionLoggerCallback
 from CollisionLoggerCallback import CollisionLoggerCallback
+from HeatmapLoggerCallback import HeatmapLoggerCallback
 import minigrid
 from SimpleEnv import SimpleEnv
 from MinigridFeaturesExtractor import MinigridFeaturesExtractor
 import gymnasium as gym
+import numpy as np
 from minigrid.wrappers import ImgObsWrapper, DictObservationSpaceWrapper
 from stable_baselines3 import A2C, DQN, HerReplayBuffer
+from her_novelty_buffer import her_novelty_buffer as HerNoveltyBuffer
 from stable_baselines3.her.goal_selection_strategy import GoalSelectionStrategy
 import os
 import time
@@ -24,6 +27,7 @@ policy_kwargs = dict(
     features_extractor_kwargs=dict(features_dim=512),
 )
 replay_buffer_kwargs = dict(
+    grid_size=(10, 10),
     n_sampled_goal=8,
     goal_selection_strategy=GOAL_SELECTION_STRATEGY,
 )
@@ -50,7 +54,7 @@ if not os.path.exists(LOG_ROOT):
 model = DQN(
     "MultiInputPolicy",
     env,
-    replay_buffer_class=HerReplayBuffer,
+    replay_buffer_class=HerNoveltyBuffer,
     replay_buffer_kwargs=replay_buffer_kwargs,
     policy_kwargs=policy_kwargs,
     batch_size=512,
@@ -64,27 +68,37 @@ model = DQN(
     max_grad_norm=1
 )
 
-TIMESTEPS = 30000
+TIMESTEPS = 10000
 RUN_NAME = f"run_{TIMESTAMP}"
 
 
 action_cb = ActionLoggerCallback()
 collision_cb = CollisionLoggerCallback()
+heatmap_cb = HeatmapLoggerCallback(model.replay_buffer)
+
 
 # training loop
-for i in range(1, 11):  # 10 Meilensteine à 30k Schritte
+for i in range(1, 6):  # 10 Meilensteine à 30k Schritte
     try:
         # train model 30k steps and log to tensorboard
+        print("--- DIAGNOSE START ---")
+        print(f"Learning Starts: {model.learning_starts}")
+        print(f"Train Freq: {model.train_freq}")
+        print(f"Total Timesteps: {TIMESTEPS}")
+        print(f"Buffer Typ: {type(model.replay_buffer)}")
+        print("--- DIAGNOSE ENDE ---")
         model.learn(
             total_timesteps=TIMESTEPS,
             reset_num_timesteps=False,
-            callback=[action_cb, collision_cb],
+            callback=[action_cb, collision_cb, heatmap_cb],
             tb_log_name=RUN_NAME
         )
 
         # save model checkpoint every 10k steps
         save_path = f"{models_dir}/{TIMESTEPS * i}"
         model.save(save_path)
+        np.save("logs/novelty_heatmap_final.npy",
+                model.replay_buffer.visit_counts)
 
         print(
             f"Meilenstein erreicht: {TIMESTEPS * i} Schritte. Modell gespeichert unter: {save_path}")

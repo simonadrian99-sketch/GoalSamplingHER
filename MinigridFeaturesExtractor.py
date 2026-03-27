@@ -12,7 +12,7 @@ class MinigridFeaturesExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.Space, features_dim: int = 512) -> None:
 
         image_space = observation_space.spaces['observation']
-        print(f"DEBUG: Image Space Shape: {image_space.shape}")
+        # print(f"DEBUG: Image Space Shape: {image_space.shape}")
         n_input_channels = image_space.shape[0]
 
         super().__init__(observation_space, features_dim)
@@ -36,9 +36,9 @@ class MinigridFeaturesExtractor(BaseFeaturesExtractor):
             dir_dim = 4  # one-hot encoding for 4 directions (0-3)
             total_concat_size = n_flatten + dir_dim + (goal_dim * 2)
 
-            print(
+            """print(
                 f"DEBUG: CNN Output: {n_flatten}, Goals: {goal_dim*2}, Dir: {dir_dim}")
-            print(f"DEBUG: Total Linear Input: {total_concat_size}")
+            print(f"DEBUG: Total Linear Input: {total_concat_size}")"""
 
         self.linear = nn.Sequential(
             nn.Linear(total_concat_size, features_dim), nn.ReLU())

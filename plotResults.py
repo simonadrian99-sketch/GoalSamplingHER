@@ -3,6 +3,7 @@ import pandas as pd
 from matplotlib import ticker
 import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
 from tensorboard.backend.event_processing import event_accumulator
 
 
@@ -60,12 +61,49 @@ ax = sns.lineplot(
 ax.xaxis.set_major_formatter(ticker.ScalarFormatter(useMathText=True))
 ax.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
 
-
 plt.title('Comparison of HER Strategies (5 Seeds per Strategy)', fontsize=14)
 plt.xlabel('Training Steps', fontsize=12)
 plt.ylabel('Success Rate', fontsize=12)
 plt.ylim(0, 1.05)
-
 plt.savefig('HER_Comparison_Plot.pdf', bbox_inches='tight')
 print("Plot erfolgreich als PDF gespeichert.")
+
+
+plt.figure(figsize=(8, 6))
+
+try:
+    counts = np.load("logs/novelty_heatmap_final.npy")
+    sns.heatmap(np.log1p(counts.T), cmap="YlGnBu",
+                cbar_kws={'label': 'Log(Visit Counts)'})
+    plt.title("Agent's State Coverage (Novelty Map)")
+    plt.gca().invert_yaxis()
+    plt.savefig("Heatmap_Visual.pdf")
+except FileNotFoundError:
+    print("Heatmap-Datei nicht gefunden.")
+
+
 plt.show()
+
+
+def plot_buffer_heatmap(model, save_path="novelty_heatmap.pdf"):
+
+    counts = model.replay_buffer.visit_counts.T
+
+    plt.figure(figsize=(8, 6))
+
+    log_counts = np.log1p(counts)
+
+    sns.heatmap(
+        log_counts,
+        annot=False,
+        cmap="YlGnBu",
+        cbar_kws={'label': 'Log(Visit Counts + 1)'}
+    )
+
+    plt.title("Agent's State Coverage (Novelty Map)")
+    plt.xlabel("Grid X")
+    plt.ylabel("Grid Y")
+    plt.gca().invert_yaxis()
+
+    plt.savefig(save_path, bbox_inches='tight')
+    plt.show()

@@ -12,8 +12,8 @@ import numpy as np
 # create environment
 env = SimpleEnv(render_mode="human")
 
-models_dir = "models/DQN+HER_10x10_future_randLast_20260327-134343"
-model_path = f"{models_dir}/50000.zip"
+models_dir = "models/DQN+HER_10x10_random_future_random_20260405-132417"
+model_path = f"{models_dir}/210000.zip"
 
 policy_kwargs = dict(
     features_extractor_class=MinigridFeaturesExtractor,

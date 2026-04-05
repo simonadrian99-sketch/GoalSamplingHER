@@ -19,13 +19,12 @@ class HeatmapLoggerCallback(BaseCallback):
             if 1 <= x <= 8 and 1 <= y <= 8:
                 self.buffer.visit_counts[x, y] += 1
 
-                if self.n_calls % 1000 == 0:
+                """if self.n_calls % 1000 == 0:
                     print(
                         f"[Heatmap] Pos: {x},{y} | Count: {self.buffer.visit_counts[x, y]}")
             else:
-                # Optional: Debug-Print für Randtreffer
                 if self.n_calls % 5000 == 0:
-                    print(f"[Heatmap] Ignoriere Randposition: {x}, {y}")
+                    print(f"[Heatmap] Ignoriere Randposition: {x}, {y}")"""
         except (IndexError, ValueError, TypeError) as e:
             print(f"Error occurred while tracking position {pos}: {e}")
 

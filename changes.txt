@@ -15,5 +15,4 @@ TODO:
 - implement different goal selection strategies (random, "fixed future")
 - Find better way to label models
 -add comments
--figure out version control (github)
 - normalise achieved and desired goal in featuresextractor (divide by grid size)

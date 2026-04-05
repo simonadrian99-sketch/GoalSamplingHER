@@ -31,11 +31,13 @@ def extract_data_from_tb(log_dir, strategy_name):
 data_future = extract_data_from_tb('logs/10x10/DQN+HER/future', 'Future')
 data_episode = extract_data_from_tb('logs/10x10/DQN+HER/episode', 'Episode')
 data_final = extract_data_from_tb('logs/10x10/DQN+HER/final', 'Final')
+data_novelty = extract_data_from_tb(
+    'logs/10x10/DQN+HER/future+novelty', 'Future+Novelty')
 
-if data_future.empty and data_episode.empty and data_final.empty:
-    print("Keine Daten gefunden! Prüfe deine Pfade.")
+if data_future.empty and data_episode.empty and data_final.empty and data_novelty.empty:
+    print("Keine Daten gefunden!")
 else:
-    final_df = pd.concat([data_future, data_episode, data_final])
+    final_df = pd.concat([data_future, data_episode, data_final, data_novelty])
     final_df['step'] = pd.to_numeric(final_df['step'])
     final_df['success_rate'] = pd.to_numeric(final_df['success_rate'])
     final_df = final_df.sort_values(['Strategy', 'Run_ID', 'step'])
@@ -72,7 +74,8 @@ print("Plot erfolgreich als PDF gespeichert.")
 plt.figure(figsize=(8, 6))
 
 try:
-    counts = np.load("logs/novelty_heatmap_final.npy")
+    counts = np.load(
+        "logs/10x10_random/DQN+HER/future/run_20260405-132417_0/heatmap_210000.npy")
     sns.heatmap(np.log1p(counts.T), cmap="YlGnBu",
                 cbar_kws={'label': 'Log(Visit Counts)'})
     plt.title("Agent's State Coverage (Novelty Map)")

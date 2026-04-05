@@ -20,8 +20,8 @@ class SimpleEnv(MiniGridEnv):
         agent_start_pos=(1, 1),
         agent_start_dir=0,
         max_steps: int | None = None,
-        GOAL_TYPE="randLast",  # "randLast" or "fixed"
-        START_POS_TYPE="randFirst",  # "fixed" or "randFirst"
+        GOAL_TYPE="random",  # "randLast" or "fixed" or "random"
+        START_POS_TYPE="random",  # "fixed" or "randFirst" or "random"
         **kwargs,
     ):
 
@@ -80,9 +80,14 @@ class SimpleEnv(MiniGridEnv):
         if self.START_POS_TYPE == "randFirst":
             # random start position in the first column
             self.agent_pos = (1, self.np_random.integers(1, self.height - 2))
+            self.agent_dir = self.agent_start_dir
         elif self.START_POS_TYPE == "fixed":
             self.agent_pos = (1, 1)  # fixed start position
-        self.agent_dir = self.agent_start_dir
+            self.agent_dir = self.agent_start_dir
+        elif self.START_POS_TYPE == "random":
+            self.agent_pos = (self.np_random.integers(
+                1, self.width - 2), self.np_random.integers(1, self.height - 2))
+            self.agent_dir = self.agent_start_dir
 
         """ old code for placing the agent at a fixed position
         if self.agent_start_pos is not None:
@@ -96,8 +101,11 @@ class SimpleEnv(MiniGridEnv):
         if self.GOAL_TYPE == "randLast":
             # random goal position in the last column
             self.goal_pos = (width - 2, self.np_random.integers(1, height - 2))
-        else:
+        elif self.GOAL_TYPE == "fixed":
             self.goal_pos = (width - 2, height - 2)  # fixed goal position
+        elif self.GOAL_TYPE == "random":
+            self.goal_pos = (self.np_random.integers(
+                1, width - 2), self.np_random.integers(1, height - 2))
 
         # place the goal object in the grid
         self.put_obj(Goal(), self.goal_pos[0], self.goal_pos[1])

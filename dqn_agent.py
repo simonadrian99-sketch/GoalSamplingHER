@@ -3,6 +3,7 @@ import itertools
 from ActionLoggerCallback import ActionLoggerCallback
 from CollisionLoggerCallback import CollisionLoggerCallback
 from HeatmapLoggerCallback import HeatmapLoggerCallback
+from KeyGoalEnv import KeyGoalEnv
 import minigrid
 from SimpleEnv import SimpleEnv
 from MinigridFeaturesExtractor import MinigridFeaturesExtractor
@@ -20,8 +21,9 @@ import time
 LOG_ROOT = "logs"
 MODEL_ROOT = "models"
 ALGORITHM_NAME = "DQN+HER"
-GOAL_SELECTION_STRATEGY = "episode"  # "final", "episode", "random", "future"
-NOVELTY_ON = False
+GOAL_SELECTION_STRATEGY = "future"  # "final", "episode", "random", "future"
+NOVELTY_ON = True
+ENV_NAME = "Default"
 TIMESTAMP = time.strftime("%Y%m%d-%H%M%S")
 
 
@@ -33,7 +35,7 @@ policy_kwargs = dict(
 if NOVELTY_ON:
     replay_buffer_class = HerNoveltyBuffer
     replay_buffer_kwargs = dict(
-        grid_size=(10, 10),
+        grid_size=(12, 12),
         n_sampled_goal=8,
         goal_selection_strategy=GOAL_SELECTION_STRATEGY,
     )
@@ -46,23 +48,23 @@ else:
 
 
 # create environment
-env = SimpleEnv(render_mode="rgb_array")
+env = KeyGoalEnv(render_mode="rgb_array")
 
 # create model path based on environment size and goal selection strategy
 if NOVELTY_ON == False:
     # models_dir = f"models/DQN+HER_{env.width-2}x{env.height-2}_{env.START_POS_TYPE}_{GOAL_SELECTION_STRATEGY}_{env.GOAL_TYPE}_{TIMESTAMP}"
-    models_dir = os.path.join(MODEL_ROOT, ALGORITHM_NAME, f"{env.width-2}x{env.height-2}_{env.START_POS_TYPE}",
-                              GOAL_SELECTION_STRATEGY, env.GOAL_TYPE, TIMESTAMP)
+    models_dir = os.path.join(MODEL_ROOT, ENV_NAME, ALGORITHM_NAME, f"{env.width-2}x{env.height-2}_{env.START_POS_TYPE}",
+                              GOAL_SELECTION_STRATEGY, TIMESTAMP)
     LOG_DIR = os.path.join(
-        LOG_ROOT, f"{env.width-2}x{env.height-2}_{env.START_POS_TYPE}", ALGORITHM_NAME, GOAL_SELECTION_STRATEGY
+        LOG_ROOT, ENV_NAME, f"{env.width-2}x{env.height-2}_{env.START_POS_TYPE}", ALGORITHM_NAME, GOAL_SELECTION_STRATEGY
     )
 else:
     LOG_DIR = os.path.join(
-        LOG_ROOT, f"{env.width-2}x{env.height-2}_{env.START_POS_TYPE}", ALGORITHM_NAME, "novelty"
+        LOG_ROOT, ENV_NAME, f"{env.width-2}x{env.height-2}_{env.START_POS_TYPE}", ALGORITHM_NAME, "novelty"
     )
     # models_dir = f"models/DQN+HER_{env.width-2}x{env.height-2}_{env.START_POS_TYPE}_novelty_{env.GOAL_TYPE}_{TIMESTAMP}"
-    models_dir = os.path.join(MODEL_ROOT, ALGORITHM_NAME,
-                              f"{env.width-2}x{env.height-2}_{env.START_POS_TYPE}", "novelty", env.GOAL_TYPE, TIMESTAMP)
+    models_dir = os.path.join(MODEL_ROOT, ENV_NAME, ALGORITHM_NAME,
+                              f"{env.width-2}x{env.height-2}_{env.START_POS_TYPE}", "novelty", TIMESTAMP)
 
 
 # creating model and log directory
@@ -82,6 +84,11 @@ model = DQN(
     policy_kwargs=policy_kwargs,
     batch_size=512,
     buffer_size=100000,
+
+    exploration_fraction=0.5,
+    exploration_initial_eps=1.0,
+    exploration_final_eps=0.05,
+
     verbose=1,
     tensorboard_log=LOG_DIR,
     device="cuda",
@@ -104,7 +111,7 @@ callbacks.append(heatmap_cb)
 
 
 # training loop
-for i in range(1, 11):  # 10 Meilensteine à 30k Schritte
+for i in range(1, 21):  # 10 Meilensteine à 30k Schritte
     try:
         # train model 30k steps and log to tensorboard
         """print(RUN_NAME)

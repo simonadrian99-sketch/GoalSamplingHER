@@ -28,11 +28,13 @@ def extract_data_from_tb(log_dir, strategy_name):
     return pd.concat(all_runs_data) if all_runs_data else pd.DataFrame()
 
 
-data_future = extract_data_from_tb('logs/10x10/DQN+HER/future', 'Future')
-data_episode = extract_data_from_tb('logs/10x10/DQN+HER/episode', 'Episode')
-data_final = extract_data_from_tb('logs/10x10/DQN+HER/final', 'Final')
+data_future = extract_data_from_tb(
+    'logs/10x10_random/DQN+HER/future', 'Future')
+data_episode = extract_data_from_tb(
+    'logs/10x10_random/DQN+HER/episode', 'Episode')
+data_final = extract_data_from_tb('logs/10x10_random/DQN+HER/final', 'Final')
 data_novelty = extract_data_from_tb(
-    'logs/10x10/DQN+HER/future+novelty', 'Future+Novelty')
+    'logs/10x10_random/DQN+HER/novelty', 'Novelty')
 
 if data_future.empty and data_episode.empty and data_final.empty and data_novelty.empty:
     print("Keine Daten gefunden!")
@@ -67,46 +69,74 @@ plt.title('Comparison of HER Strategies (5 Seeds per Strategy)', fontsize=14)
 plt.xlabel('Training Steps', fontsize=12)
 plt.ylabel('Success Rate', fontsize=12)
 plt.ylim(0, 1.05)
-plt.savefig('HER_Comparison_Plot.pdf', bbox_inches='tight')
+plt.savefig('logs/10x10_random/DQN+HER/HER_Comparison_Plot.pdf',
+            bbox_inches='tight')
 print("Plot erfolgreich als PDF gespeichert.")
 
 
 plt.figure(figsize=(8, 6))
 
+RUN_ID = 'run_20260406-131918_0'
+ENV_SCENARIO = '10x10_random'
+ALGORITHM = 'DQN+HER'
+STRATEGY = 'novelty'
+STEP_COUNT = 30000
+ENV_TYPE = "standard"  # "KeyGoal" oder "standard"
+
 try:
-    counts = np.load(
-        "logs/10x10_random/DQN+HER/future/run_20260405-132417_0/heatmap_210000.npy")
-    sns.heatmap(np.log1p(counts.T), cmap="YlGnBu",
-                cbar_kws={'label': 'Log(Visit Counts)'})
-    plt.title("Agent's State Coverage (Novelty Map)")
-    plt.gca().invert_yaxis()
-    plt.savefig("Heatmap_Visual.pdf")
+    if ENV_TYPE == "KeyGoal":
+        file_path = f"logs/{ENV_TYPE}/{ENV_SCENARIO}/{ALGORITHM}/{STRATEGY}/{RUN_ID}/heatmap_{STEP_COUNT}.npy"
+    else:
+        file_path = f"logs/{ENV_SCENARIO}/{ALGORITHM}/{STRATEGY}/{RUN_ID}/heatmap_{STEP_COUNT}.npy"
+    counts = np.load(file_path)
+
+    if counts.ndim == 3:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+
+        data0 = counts[1:11, 1:11, 0].T
+        sns.heatmap(np.log1p(data0), cmap="YlGnBu", ax=ax1,
+                    cbar_kws={'label': 'Log(Visit Counts)'})
+        ax1.set_title("Exploration OHNE Schlüssel")
+        ax1.invert_yaxis()
+
+        data1 = counts[1:11, 1:11, 1].T
+        sns.heatmap(np.log1p(data1), cmap="OrRd", ax=ax2,
+                    cbar_kws={'label': 'Log(Visit Counts)'})
+        ax2.set_title("Exploration MIT Schlüssel")
+        ax2.invert_yaxis()
+
+        plt.suptitle(
+            f"Agent's State Coverage - Step {STEP_COUNT}", fontsize=16)
+        plt.tight_layout()
+    else:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.heatmap(np.log1p(counts[1:11, 1:11].T), cmap="YlGnBu", ax=ax,
+                    cbar_kws={'label': 'Log(Visit Counts)'})
+
+    save_path = f"logs/{ENV_SCENARIO}/{ALGORITHM}/{STRATEGY}/{RUN_ID}/Heatmap_3D_{STEP_COUNT}.pdf"
+    plt.savefig(save_path, bbox_inches='tight')
+    print(f"Heatmap für Step {STEP_COUNT} gespeichert.")
+    plt.show()
 except FileNotFoundError:
-    print("Heatmap-Datei nicht gefunden.")
-
-
-plt.show()
+    print(f"Heatmap-Datei in {file_path} nicht gefunden.")
 
 
 def plot_buffer_heatmap(model, save_path="novelty_heatmap.pdf"):
+    counts = model.replay_buffer.visit_counts
 
-    counts = model.replay_buffer.visit_counts.T
+    if counts.ndim == 3:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+        sns.heatmap(np.log1p(counts[1:11, 1:11, 0].T), cmap="YlGnBu", ax=ax1)
+        ax1.set_title("Ebene: Kein Schlüssel")
+        ax1.invert_yaxis()
 
-    plt.figure(figsize=(8, 6))
-
-    log_counts = np.log1p(counts)
-
-    sns.heatmap(
-        log_counts,
-        annot=False,
-        cmap="YlGnBu",
-        cbar_kws={'label': 'Log(Visit Counts + 1)'}
-    )
-
-    plt.title("Agent's State Coverage (Novelty Map)")
-    plt.xlabel("Grid X")
-    plt.ylabel("Grid Y")
-    plt.gca().invert_yaxis()
+        sns.heatmap(np.log1p(counts[1:11, 1:11, 1].T), cmap="OrRd", ax=ax2)
+        ax2.set_title("Ebene: Mit Schlüssel")
+        ax2.invert_yaxis()
+    else:
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(np.log1p(counts[1:11, 1:11].T), cmap="YlGnBu")
+        plt.gca().invert_yaxis()
 
     plt.savefig(save_path, bbox_inches='tight')
     plt.show()

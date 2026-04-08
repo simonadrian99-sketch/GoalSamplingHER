@@ -1,5 +1,7 @@
 import minigrid
 import pygame
+from KeyGoalEnv import KeyGoalEnv
+from MinigridFeaturesExtractor import MinigridFeaturesExtractor
 from SimpleEnv import SimpleEnv
 from MinigridFeaturesExtractor import MinigridFeaturesExtractor
 import gymnasium as gym
@@ -10,10 +12,17 @@ import numpy as np
 
 
 # create environment
-env = SimpleEnv(render_mode="human")
+env = KeyGoalEnv(render_mode="human")
 
-models_dir = "models/DQN+HER_10x10_random_future_random_20260405-132417"
-model_path = f"{models_dir}/210000.zip"
+MODEL_ROOT = "models"
+ALGORITHM_NAME = "DQN+HER"
+ENV = f"10x10_random"
+SAMPLING_METHOD = "future"
+RUN_ID = "20260408-003846"
+
+models_dir = os.path.join(MODEL_ROOT, "KeyGoal", ALGORITHM_NAME,
+                          ENV, SAMPLING_METHOD, RUN_ID)
+model_path = f"{models_dir}/180000.zip"
 
 policy_kwargs = dict(
     features_extractor_class=MinigridFeaturesExtractor,

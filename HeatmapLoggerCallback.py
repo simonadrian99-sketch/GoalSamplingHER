@@ -16,16 +16,16 @@ class HeatmapLoggerCallback(BaseCallback):
 
         try:
             x, y = int(round(float(pos[0]))), int(round(float(pos[1])))
-            if 1 <= x <= 8 and 1 <= y <= 8:
-                self.buffer.visit_counts[x, y] += 1
-
-                """if self.n_calls % 1000 == 0:
-                    print(
-                        f"[Heatmap] Pos: {x},{y} | Count: {self.buffer.visit_counts[x, y]}")
+            if len(pos) == 3:
+                has_key = int(round(float(pos[2])))
+                if 1 <= x <= 10 and 1 <= y <= 10:
+                    self.buffer.visit_counts[x, y, has_key] += 1
             else:
-                if self.n_calls % 5000 == 0:
-                    print(f"[Heatmap] Ignoriere Randposition: {x}, {y}")"""
+                if 1 <= x <= 10 and 1 <= y <= 10:
+                    self.buffer.visit_counts[x, y] += 1
+
         except (IndexError, ValueError, TypeError) as e:
-            print(f"Error occurred while tracking position {pos}: {e}")
+            if self.n_calls % 1000 == 0:
+                print(f"Error occurred while tracking position {pos}: {e}")
 
         return True

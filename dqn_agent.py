@@ -48,7 +48,10 @@ else:
 
 
 # create environment
-env = KeyGoalEnv(render_mode="rgb_array")
+if ENV_NAME == "KeyGoal":
+    env = KeyGoalEnv(render_mode="rgb_array")
+else:
+    env = SimpleEnv(render_mode="rgb_array")
 
 # create model path based on environment size and goal selection strategy
 if NOVELTY_ON == False:

@@ -3,14 +3,17 @@ from stable_baselines3.her.her_replay_buffer import HerReplayBuffer
 
 
 class her_novelty_buffer(HerReplayBuffer):
-    def __init__(self, *args, grid_size=(10, 10), **kwargs):
+    def __init__(self, *args, grid_size=(12, 12), **kwargs):
         print("!!! NOVELTY BUFFER INITIALISIERT !!!")
         super().__init__(*args, **kwargs)
-        self.visit_counts = np.ones(grid_size)
-        """self.visit_counts[0, :] = 1e6
-        self.visit_counts[9, :] = 1e6
-        self.visit_counts[:, 0] = 1e6
-        self.visit_counts[:, 9] = 1e6"""
+
+        goal_shape = self.observation_space.spaces['achieved_goal'].shape[0]
+        if goal_shape == 3:
+            # 3D Heatmap: [x, y, has_key]
+            self.visit_counts = np.ones((*grid_size, 2))
+        else:
+            # 2D Heatmap: [x, y]
+            self.visit_counts = np.ones(grid_size)
         self.novelty_hits = 0
         self.fallback_hits = 0
         self.debug_counter = 0
@@ -19,63 +22,72 @@ class her_novelty_buffer(HerReplayBuffer):
 
         batch_size = len(batch_indices)
         goal_dim = self.observations["achieved_goal"].shape[-1]
+
+        n_candidates = 5
+        rep_batch_indices = np.repeat(batch_indices, n_candidates)
+        rep_env_indices = np.repeat(env_indices, n_candidates)
+
+        all_candidates = super()._sample_goals(rep_batch_indices, rep_env_indices)
+
+        candidate_grid = all_candidates.reshape(
+            batch_size, n_candidates, goal_dim)
+
+        """DEBUG
+        if self.novelty_hits % 100 == 0:
+            print(f"\n--- Debugging Novelty Sampling ---")
+            print(f"Original Batch Index: {batch_indices[0]}")
+            print(
+                f"Die 5 gezogenen Kandidaten (Koordinaten):\n{candidate_grid[0]}")
+            unique_candidates = np.unique(candidate_grid[0], axis=0)
+            print(
+                f"Anzahl unterschiedlicher Kandidaten: {len(unique_candidates)}/5")
+        for j in range(n_candidates):
+            c = candidate_grid[0][j].astype(int)
+            count = self.visit_counts[c[0], c[1], c[2]
+                                      ] if goal_dim == 3 else self.visit_counts[c[0], c[1]]
+            print(f"Kandidat {j}: Pos {c} -> Visits: {count}")
+        DEBUG ENDE"""
+
         new_goals = np.zeros((batch_size, goal_dim),
-                             dtype=self.observations["achieved_goal"].dtype)
+                             dtype=all_candidates.dtype)
+        coords = candidate_grid.astype(int)
+
+        mask = (coords[:, :, 0] >= 1) & (coords[:, :, 0] <= 10) & \
+               (coords[:, :, 1] >= 1) & (coords[:, :, 1] <= 10)
 
         current_novelty = 0
         current_fallback = 0
 
         for i in range(batch_size):
-            batch_idx = batch_indices[i]
-            env_idx = env_indices[i]
+            valid_mask = mask[i]
 
-            candidates = []
-            candidate_coords = []
+            if np.any(valid_mask):
+                valid_candidates = candidate_grid[i][valid_mask]
+                valid_coords = coords[i][valid_mask]
 
-            for _ in range(5):
-                single_goal = super()._sample_goals(
-                    np.array([batch_idx]), np.array([env_idx]))[0]
-                coords = single_goal.astype(int)
-                if 0 < coords[0] < 9 and 0 < coords[1] < 9:
-                    candidates.append(single_goal)
-                    candidate_coords.append(coords)
-
-            if len(candidates) > 0:
-                counts = [self.visit_counts[c[0], c[1]]
-                          for c in candidate_coords]
+                if goal_dim == 3:
+                    counts = self.visit_counts[valid_coords[:, 0],
+                                               valid_coords[:, 1],
+                                               valid_coords[:, 2]]
+                else:
+                    counts = self.visit_counts[valid_coords[:, 0],
+                                               valid_coords[:, 1]]
                 best_idx = np.argmin(counts)
-                new_goals[i] = candidates[best_idx]
-                current_novelty += 1
+                new_goals[i] = valid_candidates[best_idx]
+                self.novelty_hits += 1
             else:
-                new_goals[i] = super()._sample_goals(
-                    np.array([batch_idx]), np.array([env_idx]))[0]
-                current_fallback += 1
-
-            self.debug_counter += 1
-            self.novelty_hits += current_novelty
-            self.fallback_hits += current_fallback
-
-            if self.debug_counter % 1000 == 0:
-                total = self.novelty_hits + self.fallback_hits
-                percentage = (self.novelty_hits / total) * 100
-                """print(f"\n[DEBUG BA] Goal Selection Stats:")
-                print(f"  - Novelty (8x8): {self.novelty_hits}")
-                print(f"  - Fallback: {self.fallback_hits}")
-                print(f"  - Erfolgsrate Novelty-Logik: {percentage:.2f}%")
-                print(
-                    f"  - Aktueller Heatmap-Max-Wert: {np.max(self.visit_counts)}")
-                print(
-                    f"  - Heatmap Min/Max: {np.min(self.visit_counts)} / {np.max(self.visit_counts)}")
-                print(f"  - Top-Links (1,1) Wert: {self.visit_counts[1, 1]}")"""
-
-                # Reset für die nächste Phase
-                self.novelty_hits = 0
-                self.fallback_hits = 0
+                new_goals[i] = candidate_grid[i][0]
+                self.fallback_hits += 1
 
         return new_goals
 
 
 class her_passive_logger_buffer(HerReplayBuffer):
-    def __init__(self, *args, grid_size=(10, 10), **kwargs):
+    def __init__(self, *args, grid_size=(12, 12), **kwargs):
         super().__init__(*args, **kwargs)
-        self.visit_counts = np.ones(grid_size, dtype=np.float32)
+        goal_shape = self.observation_space.spaces['achieved_goal'].shape[0]
+
+        if goal_shape == 3:
+            self.visit_counts = np.ones((*grid_size, 2), dtype=np.float32)
+        else:
+            self.visit_counts = np.ones(grid_size, dtype=np.float32)

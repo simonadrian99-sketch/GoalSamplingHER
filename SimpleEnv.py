@@ -18,13 +18,14 @@ class SimpleEnv(MiniGridEnv):
         self,
         size=12,
         agent_start_pos=(1, 1),
+        agent_view_size=11,
         agent_start_dir=0,
         max_steps: int | None = None,
-        GOAL_TYPE="random",  # "randLast" or "fixed" or "random"
-        START_POS_TYPE="random",  # "fixed" or "randFirst" or "random"
+        GOAL_TYPE="random",  # "randLast" or "fixed" or "random" or "midWalls"
+        START_POS_TYPE="random",  # "fixed" or "randFirst" or "random" or "midWalls"
         **kwargs,
     ):
-
+        self.agent_view_size = agent_view_size
         self.agent_start_pos = agent_start_pos
         self.agent_start_dir = agent_start_dir
         self.GOAL_TYPE = GOAL_TYPE
@@ -38,9 +39,9 @@ class SimpleEnv(MiniGridEnv):
         super().__init__(
             mission_space=mission_space,
             grid_size=size,
-            # Set this to True for maximum speed
             see_through_walls=True,
             max_steps=max_steps,
+            agent_view_size=agent_view_size,
             **kwargs,
         )
 
@@ -67,45 +68,55 @@ class SimpleEnv(MiniGridEnv):
         self.grid.wall_rect(0, 0, width, height)
 
         # Generate vertical separation wall
-        """
-        for i in range(0, height):
-            if i != height/2:
-                self.grid.set((int (width/2) + 1), i, Wall())
-        """
+        if self.START_POS_TYPE == "midWalls" and self.GOAL_TYPE == "midWalls":
+            GAP_POS = self.np_random.integers(
+                1, height - 2)  # Random gap position
+            for i in range(0, height):
+                if i != height//2 and i != height//2 - 1 and i != height//2 + 1:
+                    self.grid.set((int(width/2)), i, Wall())
+
         # Place the door and key
       #  self.grid.set(5, 6, Door(COLOR_NAMES[0], is_locked=True))
       #  self.grid.set(3, 6, Key(COLOR_NAMES[0]))
 
         # Place the agent
         if self.START_POS_TYPE == "randFirst":
-            # random start position in the first column
-            self.agent_pos = (1, self.np_random.integers(1, self.height - 2))
+            a_pos = (1, self.np_random.integers(1, self.height - 2))
             self.agent_dir = self.agent_start_dir
         elif self.START_POS_TYPE == "fixed":
-            self.agent_pos = (1, 1)  # fixed start position
+            a_pos = (1, 1)  # fixed start position
             self.agent_dir = self.agent_start_dir
         elif self.START_POS_TYPE == "random":
-            self.agent_pos = (self.np_random.integers(
+            a_pos = (self.np_random.integers(
                 1, self.width - 2), self.np_random.integers(1, self.height - 2))
+            while a_pos == (self.width//2, 2):
+                a_pos = (self.np_random.integers(1, self.width - 2),
+                         self.np_random.integers(1, self.height - 2))
+            self.agent_dir = self.agent_start_dir
+        elif self.START_POS_TYPE == "midWalls":
+            a_pos = (self.np_random.integers(
+                1, self.width//2 - 1), self.np_random.integers(1, self.height - 2))
             self.agent_dir = self.agent_start_dir
 
-        """ old code for placing the agent at a fixed position
-        if self.agent_start_pos is not None:
-            self.agent_pos = self.agent_start_pos
-            self.agent_dir = self.agent_start_dir
-        else:
-            self.place_agent()
-        """
+        self.agent_pos = a_pos
 
         # Place the goal
         if self.GOAL_TYPE == "randLast":
             # random goal position in the last column
-            self.goal_pos = (width - 2, self.np_random.integers(1, height - 2))
+            g_pos = (width - 2, self.np_random.integers(1, height - 2))
         elif self.GOAL_TYPE == "fixed":
-            self.goal_pos = (width - 2, height - 2)  # fixed goal position
+            g_pos = (width - 2, height - 2)  # fixed goal position
         elif self.GOAL_TYPE == "random":
-            self.goal_pos = (self.np_random.integers(
+            g_pos = (self.np_random.integers(
                 1, width - 2), self.np_random.integers(1, height - 2))
+            while g_pos == (self.width//2, 2):
+                g_pos = (self.np_random.integers(
+                    1, width - 2), self.np_random.integers(1, height - 2))
+        elif self.GOAL_TYPE == "midWalls":
+            g_pos = (self.np_random.integers(
+                self.width//2 + 1, self.width - 2), self.np_random.integers(1, self.height - 2))
+
+        self.goal_pos = g_pos
 
         # place the goal object in the grid
         self.put_obj(Goal(), self.goal_pos[0], self.goal_pos[1])
@@ -180,7 +191,7 @@ class SimpleEnv(MiniGridEnv):
             # Single item comparison
             is_success = np.array_equal(achieved_goal, desired_goal)
             reward = 0.0 if is_success else -1.0
-
+        """
         if info is not None:
             if isinstance(info, dict) and info.get("is_collision", False):
                 reward -= 0.2  # Penalty for collision
@@ -188,7 +199,7 @@ class SimpleEnv(MiniGridEnv):
                 collision_mask = np.array(
                     [i.get("is_collision", False) for i in info])
                 reward -= (collision_mask.astype(np.float32) * 0.2)
-
+        """
         return reward
 
     def _find_goal_pos(self):
